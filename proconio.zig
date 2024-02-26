@@ -40,7 +40,7 @@ fn Scanner(comptime buffer_size: usize, comptime reader: anytype) type {
             const line = breader.readUntilDelimiterOrEof(
                 &self.buffer,
                 '\n',
-            ) orelse return "";
+            ) catch return "";
             if (@import("builtin").os.tag == .windows) {
                 return std.mem.trimRight(u8, line.?, "\r");
             } else {
@@ -48,13 +48,13 @@ fn Scanner(comptime buffer_size: usize, comptime reader: anytype) type {
             }
         }
         pub fn nextUsize(self: *Self) usize {
-            return std.fmt.parseInt(usize, self.nextRaw(), 10) orelse 0;
+            return std.fmt.parseInt(usize, self.nextRaw(), 10) catch 0;
         }
         pub fn nextInt(self: *Self, comptime T: type) T {
-            return std.fmt.parseInt(T, self.nextRaw(), 10) orelse 0;
+            return std.fmt.parseInt(T, self.nextRaw(), 10) catch 0;
         }
         pub fn nextFloat(self: *Self, comptime T: type) T {
-            return std.fmt.parseFloat(T, self.nextRaw()) orelse 0.0;
+            return std.fmt.parseFloat(T, self.nextRaw()) catch 0.0;
         }
         pub fn nextNumber(self: *Self, comptime T: type) T {
             switch (@typeInfo(T)) {
