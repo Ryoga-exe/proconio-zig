@@ -60,12 +60,24 @@ fn ScannerAllAlloc(comptime S: type) type {
 }
 
 fn ScannerInteractive(comptime S: type) type {
-    _ = S; // autofix
     return struct {
         const Self = @This();
 
         allocator: Allocator,
         buffer: []u8,
+
+        fn init(allocator: Allocator, source: S) !Self {
+            _ = source; // autofix
+            return Self{
+                .allocator = allocator,
+            };
+        }
+
+        pub fn deinit(_: Self) void {}
+
+        pub fn readNextTokenSlice(_: *Self) ![]const u8 {
+            @compileError("not implemented");
+        }
     };
 }
 
