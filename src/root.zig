@@ -43,10 +43,12 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
             switch (@typeInfo(T)) {
                 .@"struct" => |info| {
                     inline for (info.fields) |field| {
-                        const buf = try self.scanner.readNextTokenSlice();
-                        // TODO: currently, it supports only Integers
-                        @field(result, field.name) = try std.fmt.parseInt(field.type, buf, 10);
+                        @field(result, field.name) = try self.input(field.type);
                     }
+                },
+                .int => |info| {
+                    const buf = try self.scanner.readNextTokenSlice();
+                    result = try std.fmt.parseInt(std.meta.Int(info.signedness, info.bits), buf, 0);
                 },
                 else => {
                     // TODO: support other types
