@@ -40,11 +40,18 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
 
         pub fn input(self: *Self, comptime T: type) !Parse(T) {
             var result: Parse(T) = undefined;
-            // TODO: support other types
-            inline for (@typeInfo(T).@"struct".fields) |field| {
-                const buf = try self.scanner.readNextTokenSlice();
-                // TODO: currently, it supports only Integers
-                @field(result, field.name) = try std.fmt.parseInt(field.type, buf, 10);
+            switch (@typeInfo(T)) {
+                .@"struct" => |info| {
+                    inline for (info.fields) |field| {
+                        const buf = try self.scanner.readNextTokenSlice();
+                        // TODO: currently, it supports only Integers
+                        @field(result, field.name) = try std.fmt.parseInt(field.type, buf, 10);
+                    }
+                },
+                else => {
+                    // TODO: support other types
+                    @compileError("");
+                },
             }
             return result;
         }
