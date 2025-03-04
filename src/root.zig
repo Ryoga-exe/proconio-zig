@@ -5,7 +5,7 @@ const sc = @import("scanner.zig");
 
 const stdin = std.io.getStdIn();
 
-pub fn init(allocator: Allocator) !Proconio() {
+pub fn init(allocator: Allocator) !Proconio {
     return Proconio.init(allocator, stdin);
 }
 
@@ -38,9 +38,15 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
             self.arena.deinit();
         }
 
-        pub fn input(self: Self, comptime T: type) Parse(T) {
-            _ = self; // autofix
-            return Parse(T){};
+        pub fn input(self: *Self, comptime T: type) !Parse(T) {
+            var result: Parse(T) = undefined;
+            // TODO: support other types
+            inline for (@typeInfo(T).@"struct".fields) |field| {
+                const buf = try self.scanner.readNextTokenSlice();
+                // TODO: currently, it supports only Integers
+                @field(result, field.name) = try std.fmt.parseInt(field.type, buf, 10);
+            }
+            return result;
         }
 
         fn Parse(comptime T: type) type {
