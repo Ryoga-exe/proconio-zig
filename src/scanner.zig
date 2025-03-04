@@ -60,23 +60,41 @@ fn ScannerAllAlloc(comptime S: type) type {
 }
 
 fn ScannerInteractive(comptime S: type) type {
+    if (S != std.fs.File) {
+        // TODO: supports other types
+        @compileError("ScannerInteractive mode only supports std.fs.File.");
+    }
     return struct {
         const Self = @This();
 
         allocator: Allocator,
-        buffer: []u8,
+        buffer: std.ArrayList(u8),
+        buffered_reader: @TypeOf(std.io.bufferedReader(std.io.getStdIn().reader())),
 
         fn init(allocator: Allocator, source: S) !Self {
-            _ = source; // autofix
             return Self{
                 .allocator = allocator,
+                .buffer = try std.ArrayList(u8).initCapacity(allocator, 4096),
+                .buffered_reader = std.io.bufferedReader(source.reader()),
             };
         }
 
-        pub fn deinit(_: Self) void {}
+        pub fn deinit(self: Self) void {
+            self.buffer.deinit();
+        }
 
-        pub fn readNextTokenSlice(_: *Self) ![]const u8 {
-            @compileError("not implemented");
+        pub fn readNextTokenSlice(self: *Self) ![]const u8 {
+            const start = self.buffer.items.len;
+            const reader = self.buffered_reader.reader();
+            const writer = self.buffer.writer();
+            while (true) {
+                const byte = try reader.readByte();
+                if (std.ascii.isWhitespace(byte)) {
+                    break;
+                }
+                try writer.writeByte(byte);
+            }
+            return self.buffer.items[start..];
         }
     };
 }
