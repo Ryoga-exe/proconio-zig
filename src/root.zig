@@ -61,6 +61,15 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
                     const buf = try self.scanner.readNextTokenSlice();
                     result = self.parse_bool(buf);
                 },
+                .@"enum" => {
+                    const buf = try self.scanner.readNextTokenSlice();
+                    result = std.meta.stringToEnum(T, buf) orelse blk: {
+                        const num = std.fmt.parseInt(usize, buf, 0) catch {
+                            return error.ParseError;
+                        };
+                        break :blk @enumFromInt(num);
+                    };
+                },
                 else => {
                     // TODO: support other types
                     @compileError("");
