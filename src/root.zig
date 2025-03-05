@@ -75,6 +75,9 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
                         result[i] = try self.input(info.child);
                     }
                 },
+                .optional => |info| {
+                    result = self.input(info.child) catch null;
+                },
                 .vector => |info| {
                     inline for (0..info.len) |i| {
                         result[i] = try self.input(info.child);
