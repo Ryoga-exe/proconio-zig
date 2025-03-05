@@ -47,8 +47,13 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
                     }
                 },
                 .int => |info| {
+                    // TODO: currently, we can't get single character as u8... Need to implement 'Char' struct like original proconio
                     const buf = try self.scanner.readNextTokenSlice();
                     result = try std.fmt.parseInt(std.meta.Int(info.signedness, info.bits), buf, 0);
+                },
+                .float => |info| {
+                    const buf = try self.scanner.readNextTokenSlice();
+                    result = try std.fmt.parseFloat(std.meta.Float(info.bits), buf);
                 },
                 else => {
                     // TODO: support other types
