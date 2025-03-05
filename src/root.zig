@@ -82,7 +82,7 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
                 },
                 else => {
                     // TODO: support other types
-                    @compileError("");
+                    @compileError(std.fmt.comptimePrint("invalid type ({s}) given to Scanner", .{@typeName(T)}));
                 },
             }
             return result;
