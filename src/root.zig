@@ -25,11 +25,13 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
 
         arena: ArenaAllocator,
         scanner: sc.Scanner(S, interactive),
+        parse_bool: *const fn ([]const u8) bool,
 
         fn init(allocator: Allocator, source: anytype) !Self {
             return Self{
                 .arena = ArenaAllocator.init(allocator),
                 .scanner = try sc.scanner(allocator, source, interactive),
+                .parse_bool = parseBoolDefault,
             };
         }
 
@@ -55,6 +57,10 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
                     const buf = try self.scanner.readNextTokenSlice();
                     result = try std.fmt.parseFloat(std.meta.Float(info.bits), buf);
                 },
+                .bool => {
+                    const buf = try self.scanner.readNextTokenSlice();
+                    result = self.parse_bool(buf);
+                },
                 else => {
                     // TODO: support other types
                     @compileError("");
@@ -67,6 +73,10 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
             return T;
         }
     };
+}
+
+fn parseBoolDefault(buf: []const u8) bool {
+    return !(std.mem.eql(u8, buf, "false") or std.mem.eql(u8, buf, "0"));
 }
 
 const testing = std.testing;
