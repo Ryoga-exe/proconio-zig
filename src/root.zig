@@ -70,6 +70,11 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
                         break :blk @enumFromInt(num);
                     };
                 },
+                .array => |info| {
+                    inline for (0..info.len) |i| {
+                        result[i] = try self.input(info.child);
+                    }
+                },
                 .vector => |info| {
                     inline for (0..info.len) |i| {
                         result[i] = try self.input(info.child);
