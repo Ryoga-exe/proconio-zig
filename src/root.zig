@@ -91,6 +91,24 @@ fn parseBoolDefault(buf: []const u8) bool {
 const testing = std.testing;
 test {
     const allocator = testing.allocator;
-    const proconio = try init(allocator);
+    var proconio = try initAny(
+        allocator,
+        "1234 5678 3.14 true false",
+        false,
+    );
     defer proconio.deinit();
+
+    const in = try proconio.input(struct {
+        n: u32,
+        m: i64,
+        f: f32,
+        b1: bool,
+        b2: bool,
+    });
+
+    try testing.expectEqual(@as(u32, 1234), in.n);
+    try testing.expectEqual(@as(i64, 5678), in.m);
+    try testing.expectEqual(@as(f32, 3.14), in.f);
+    try testing.expectEqual(true, in.b1);
+    try testing.expectEqual(false, in.b2);
 }
