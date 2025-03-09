@@ -1,21 +1,23 @@
 # proconio-zig
 
-proconio for the Zig programming language. useful and easy io library for programming contests.
+proconio for the Zig programming language. useful and easy IO library for programming contests.
 
 ## usage
 
 ```zig
 const std = @import("std");
-const Input = @import("proconio.zig").Input;
+const proconio = @import("proconio");
 
 pub fn main() !void {
-    const input = Input(1024).init();
-
-    _ = input.nextUsize();
-    _ = input.nextFloat(f64);
-
     const allocator = std.heap.page_allocator;
-    const slice = input.nextSlice(usize, allocator, 10);
-    defer allocator.free(slice);
+    var io = try proconio.init(allocator);
+    defer io.deinit();
+
+    const in = try io.input(struct {
+        n: u8,
+        m: u32,
+        l: i32,
+    });
+    std.debug.print("{}, {}, {}\n", .{in.n, in.m, in.l});
 }
 ```
