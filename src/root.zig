@@ -48,6 +48,9 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
                         @field(result, field.name) = try self.input(field.type);
                     }
                 },
+                .void => {
+                    _ = try self.scanner.readNextTokenSlice();
+                },
                 .int => {
                     // TODO: currently, we can't get single character as u8... Need to implement 'Char' struct like original proconio
                     const buf = try self.scanner.readNextTokenSlice();
@@ -64,6 +67,7 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
                 .@"enum" => {
                     const buf = try self.scanner.readNextTokenSlice();
                     result = std.meta.stringToEnum(T, buf) orelse blk: {
+                        // if something went wrong, try enumFromInt
                         const num = std.fmt.parseInt(usize, buf, 0) catch {
                             return error.ParseError;
                         };
