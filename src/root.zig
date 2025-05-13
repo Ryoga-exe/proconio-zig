@@ -2,6 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ArenaAllocator = std.heap.ArenaAllocator;
 const sc = @import("scanner.zig");
+pub const marker = @import("marker.zig");
 
 const stdin = std.io.getStdIn();
 
@@ -44,8 +45,12 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
             var result: Parse(T) = undefined;
             switch (@typeInfo(T)) {
                 .@"struct" => |info| {
-                    inline for (info.fields) |field| {
-                        @field(result, field.name) = try self.input(field.type);
+                    if (@hasField(T, "__proconio_marker_bytes")) {
+                        result = try self.scanner.readNextTokenSlice();
+                    } else {
+                        inline for (info.fields) |field| {
+                            @field(result, field.name) = try self.input(field.type);
+                        }
                     }
                 },
                 .void => {
@@ -96,7 +101,36 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
         }
 
         fn Parse(comptime T: type) type {
-            return T;
+            switch (@typeInfo(T)) {
+                .@"struct" => |info| {
+                    if (@hasField(T, "__proconio_marker_bytes")) {
+                        return []const u8;
+                    } else {
+                        var fields: [info.fields.len]std.builtin.Type.StructField = undefined;
+                        inline for (info.fields, 0..) |field, i| {
+                            const FieldType = Self.Parse(field.type);
+                            fields[i] = .{
+                                .name = field.name,
+                                .type = FieldType,
+                                .default_value_ptr = field.default_value_ptr,
+                                .is_comptime = field.is_comptime,
+                                .alignment = @alignOf(FieldType),
+                            };
+                        }
+
+                        return @Type(.{
+                            .@"struct" = .{
+                                .layout = info.layout,
+                                .backing_integer = info.backing_integer,
+                                .fields = &fields,
+                                .decls = info.decls,
+                                .is_tuple = info.is_tuple,
+                            },
+                        });
+                    }
+                },
+                else => return T,
+            }
         }
     };
 }
@@ -110,7 +144,7 @@ test {
     const allocator = testing.allocator;
     var proconio = try initAny(
         allocator,
-        "1234 5678 3.14 true false",
+        "1234 5678 3.14 true false test",
         false,
     );
     defer proconio.deinit();
@@ -121,6 +155,7 @@ test {
         f: f32,
         b1: bool,
         b2: bool,
+        s: marker.Bytes,
     });
 
     try testing.expectEqual(@as(u32, 1234), in.n);
@@ -128,4 +163,5 @@ test {
     try testing.expectEqual(@as(f32, 3.14), in.f);
     try testing.expectEqual(true, in.b1);
     try testing.expectEqual(false, in.b2);
+    try testing.expectEqualSlices(u8, "test", in.s);
 }
