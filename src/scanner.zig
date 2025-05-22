@@ -33,7 +33,7 @@ fn ScannerAllAlloc(comptime S: type) type {
                         }
                     },
                     else => {
-                        if (std.meta.hasMethod(@TypeOf(std.io.getStdIn()), "reader")) {
+                        if (std.meta.hasMethod(S, "reader")) {
                             const reader = source.reader();
                             break :blk try reader.readAllAlloc(allocator, std.math.maxInt(usize));
                         } else {
