@@ -89,6 +89,13 @@ fn ScannerInteractive(comptime S: type) type {
             const writer = self.buffer.writer();
             while (true) {
                 const byte = try reader.readByte();
+                if (!std.ascii.isWhitespace(byte)) {
+                    try writer.writeByte(byte);
+                    break;
+                }
+            }
+            while (true) {
+                const byte = try reader.readByte();
                 if (std.ascii.isWhitespace(byte)) {
                     break;
                 }
