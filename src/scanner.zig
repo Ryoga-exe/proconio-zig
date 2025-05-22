@@ -2,7 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const TokenIterator = std.mem.TokenIterator(u8, .any);
 const tokenize = std.mem.tokenizeAny;
-const delimiters = " \t\r\n";
+const delimiters = std.ascii.whitespace;
 
 pub inline fn scanner(allocator: Allocator, source: anytype, comptime interactive: bool) !Scanner(@TypeOf(source), interactive) {
     return Scanner(@TypeOf(source), interactive).init(allocator, source);
@@ -45,7 +45,7 @@ fn ScannerAllAlloc(comptime S: type) type {
             return Self{
                 .allocator = allocator,
                 .buffer = buffer,
-                .token_iter = tokenize(u8, buffer, delimiters),
+                .token_iter = tokenize(u8, buffer, &delimiters),
             };
         }
 
