@@ -144,7 +144,7 @@ test {
     const allocator = testing.allocator;
     var proconio = try initAny(
         allocator,
-        "1234 5678 3.14 true false test",
+        "1234 5678 3.14 true false test\n 100 100 200 300",
         false,
     );
     defer proconio.deinit();
@@ -156,6 +156,7 @@ test {
         b1: bool,
         b2: bool,
         s: marker.Bytes,
+        arr: marker.Slice(struct { usize, usize }, 2),
     });
 
     try testing.expectEqual(@as(u32, 1234), in.n);
@@ -164,4 +165,6 @@ test {
     try testing.expectEqual(true, in.b1);
     try testing.expectEqual(false, in.b2);
     try testing.expectEqualSlices(u8, "test", in.s);
+
+    try testing.expectEqualSlices(struct { usize, usize }, &[_]struct { usize, usize }{ .{ 100, 100 }, .{ 200, 300 } }, in.arr);
 }
