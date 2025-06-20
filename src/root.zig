@@ -45,8 +45,8 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
             var result: Parse(T) = undefined;
             switch (@typeInfo(T)) {
                 .@"struct" => |info| {
-                    if (@hasField(T, "__proconio_marker_bytes")) {
-                        result = try self.scanner.readNextTokenSlice();
+                    if (@hasField(T, "__proconio_marker")) {
+                        result = try T.input(self);
                     } else {
                         inline for (info.fields) |field| {
                             @field(result, field.name) = try self.input(field.type);
@@ -103,8 +103,8 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
         fn Parse(comptime T: type) type {
             switch (@typeInfo(T)) {
                 .@"struct" => |info| {
-                    if (@hasField(T, "__proconio_marker_bytes")) {
-                        return []const u8;
+                    if (@hasField(T, "__proconio_marker")) {
+                        return T.Type;
                     } else {
                         var fields: [info.fields.len]std.builtin.Type.StructField = undefined;
                         inline for (info.fields, 0..) |field, i| {
