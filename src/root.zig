@@ -1,10 +1,11 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ArenaAllocator = std.heap.ArenaAllocator;
+const File = std.fs.File;
 const sc = @import("scanner.zig");
 pub const marker = @import("marker.zig");
 
-const stdin = std.io.getStdIn();
+const stdin = File.stdin();
 
 pub fn init(allocator: Allocator) !Proconio {
     return Proconio.init(allocator, stdin);
@@ -18,8 +19,8 @@ fn initAny(allocator: Allocator, source: anytype, comptime interactive: bool) !P
     return ProconioAny(@TypeOf(source), interactive).init(allocator, source);
 }
 
-const Proconio = ProconioAny(@TypeOf(stdin), @import("builtin").mode == .Debug);
-const ProconioInteractive = ProconioAny(@TypeOf(stdin), true);
+const Proconio = ProconioAny(File, @import("builtin").mode == .Debug);
+const ProconioInteractive = ProconioAny(File, true);
 fn ProconioAny(comptime S: type, comptime interactive: bool) type {
     return struct {
         const Self = @This();
@@ -36,7 +37,7 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
             };
         }
 
-        pub fn deinit(self: Self) void {
+        pub fn deinit(self: *Self) void {
             self.scanner.deinit();
             self.arena.deinit();
         }
