@@ -3,7 +3,10 @@ pub const Bytes = struct {
     pub const Type = []const u8;
 
     pub fn input(io: anytype) !Type {
-        return io.scanner.readNextTokenSlice();
+        // NOTE: or
+        // const allocator = io.arena.allocator();
+        // return try allocator.dupe(u8, io.scanner.readNextTokenSlice());
+        return try io.scanner.readNextTokenSlice();
     }
 };
 
