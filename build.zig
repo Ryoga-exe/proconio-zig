@@ -39,9 +39,7 @@ pub fn build(b: *std.Build) void {
                 },
             }),
         });
-        const install_example = b.addInstallArtifact(example, .{
-            .dest_sub_path = "examples",
-        });
+        const install_example = b.addInstallArtifact(example, .{});
         example_step.dependOn(&example.step);
         example_step.dependOn(&install_example.step);
     }
