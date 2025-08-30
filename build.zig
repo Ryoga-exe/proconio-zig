@@ -27,6 +27,7 @@ pub fn build(b: *std.Build) void {
     const example_step = b.step("examples", "Build examples");
     for ([_][]const u8{
         "simple",
+        "practice",
     }) |example_name| {
         const example = b.addExecutable(.{
             .name = example_name,
