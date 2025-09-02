@@ -1,5 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const File = std.fs.File;
+const Reader = std.Io.Reader;
 const TokenIterator = std.mem.TokenIterator(u8, .any);
 const tokenize = std.mem.tokenizeAny;
 const delimiters = std.ascii.whitespace;
@@ -22,26 +24,33 @@ fn ScannerAllAlloc(comptime S: type) type {
 
         fn init(allocator: Allocator, source: S) !Self {
             const buffer = blk: {
-                switch (@typeInfo(S)) {
-                    .pointer => |ptr_info| {
-                        switch (ptr_info.size) {
-                            .slice, .one => {
-                                // TODO: check ptr_info.child
-                                break :blk try allocator.dupe(u8, source);
-                            },
-                            else => @compileError("invalid type given to Scanner"),
-                        }
+                switch (S) {
+                    File => {
+                        var file_buffer: [1024]u8 = undefined;
+                        var file_reader = source.reader(&file_buffer);
+                        const reader = &file_reader.interface;
+                        break :blk try reader.allocRemaining(allocator, .unlimited);
                     },
-                    else => {
-                        if (std.meta.hasMethod(S, "reader")) {
-                            const reader = source.reader();
-                            break :blk try reader.readAllAlloc(allocator, std.math.maxInt(usize));
-                        } else {
+                    Reader => {
+                        break :blk try source.allocRemaining(allocator, .unlimited);
+                    },
+                    else => switch (@typeInfo(S)) {
+                        .pointer => |ptr_info| {
+                            switch (ptr_info.size) {
+                                .slice, .one => {
+                                    // TODO: check ptr_info.child
+                                    break :blk try allocator.dupe(u8, source);
+                                },
+                                else => @compileError("invalid type given to Scanner"),
+                            }
+                        },
+                        else => {
                             @compileError("invalid type given to Scanner");
-                        }
+                        },
                     },
                 }
             };
+
             return Self{
                 .allocator = allocator,
                 .buffer = buffer,
@@ -60,42 +69,46 @@ fn ScannerAllAlloc(comptime S: type) type {
 }
 
 fn ScannerInteractive(comptime S: type) type {
-    if (S != std.fs.File) {
+    if (S != File) {
         // TODO: supports other types
         @compileError("ScannerInteractive mode only supports std.fs.File.");
     }
     return struct {
         const Self = @This();
 
+        var reader_buffer: [1024]u8 = undefined;
+
         allocator: Allocator,
         buffer: std.ArrayList(u8),
-        buffered_reader: @TypeOf(std.io.bufferedReader(std.io.getStdIn().reader())),
+        reader: File.Reader,
 
         fn init(allocator: Allocator, source: S) !Self {
             return Self{
                 .allocator = allocator,
-                .buffer = try std.ArrayList(u8).initCapacity(allocator, 4096),
-                .buffered_reader = std.io.bufferedReader(source.reader()),
+                .buffer = try std.ArrayList(u8).initCapacity(allocator, 1024),
+                .reader = source.reader(&reader_buffer),
             };
         }
 
-        pub fn deinit(self: Self) void {
-            self.buffer.deinit();
+        pub fn deinit(self: *Self) void {
+            self.buffer.deinit(self.allocator);
         }
 
         pub fn readNextTokenSlice(self: *Self) ![]const u8 {
+            // NOTE: consider `start=0`
+            // this scanner is only used by proconio and outer proconio call this with `dupe` for Bytes
             const start = self.buffer.items.len;
-            const reader = self.buffered_reader.reader();
-            const writer = self.buffer.writer();
+            const writer = self.buffer.writer(self.allocator);
+            const reader = &self.reader.interface;
             while (true) {
-                const byte = try reader.readByte();
+                const byte = try reader.takeByte();
                 if (!std.ascii.isWhitespace(byte)) {
                     try writer.writeByte(byte);
                     break;
                 }
             }
             while (true) {
-                const byte = try reader.readByte();
+                const byte = try reader.takeByte();
                 if (std.ascii.isWhitespace(byte)) {
                     break;
                 }
