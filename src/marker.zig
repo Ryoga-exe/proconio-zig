@@ -1,8 +1,10 @@
-pub const Bytes = struct {
-    __proconio_marker: void,
-    pub const Type = []const u8;
+const Parse = @import("utils.zig").Parse;
 
-    pub fn input(io: anytype) !Type {
+pub const Bytes = struct {
+    pub const Type = []const u8;
+    __proconio_marker: void = {},
+
+    pub fn input(io: anytype, _: ?Bytes) !Type {
         // NOTE: or
         // const allocator = io.arena.allocator();
         // return try allocator.dupe(u8, io.scanner.readNextTokenSlice());
@@ -10,14 +12,19 @@ pub const Bytes = struct {
     }
 };
 
-pub fn Slice(comptime T: type, len: usize) type {
+pub fn Slice(comptime T: type) type {
     return struct {
-        __proconio_marker: void,
-        pub const Type = []T;
+        const Self = @This();
+        const InnerType = Parse(T);
+        pub const Type = []InnerType;
+        __proconio_marker: void = {},
 
-        pub fn input(io: anytype) !Type {
+        len: usize,
+
+        pub fn input(io: anytype, context: ?Self) !Type {
             const allocator = io.arena.allocator();
-            var result = try allocator.alloc(T, len);
+            const len = context.?.len;
+            var result = try allocator.alloc(InnerType, len);
             errdefer allocator.free(result);
 
             for (0..len) |i| {
@@ -25,6 +32,10 @@ pub fn Slice(comptime T: type, len: usize) type {
             }
 
             return result;
+        }
+
+        pub fn init(len: usize) Self {
+            return .{ .len = len };
         }
     };
 }

@@ -3,6 +3,8 @@ const Allocator = std.mem.Allocator;
 const ArenaAllocator = std.heap.ArenaAllocator;
 const File = std.fs.File;
 const sc = @import("scanner.zig");
+const utils = @import("utils.zig");
+const Parse = utils.Parse;
 pub const marker = @import("marker.zig");
 
 const stdin = File.stdin();
@@ -43,14 +45,18 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
         }
 
         pub fn input(self: *Self, comptime T: type) !Parse(T) {
+            return self.inputWithDefault(T, null);
+        }
+
+        pub fn inputWithDefault(self: *Self, comptime T: type, default_value: ?T) !Parse(T) {
             var result: Parse(T) = undefined;
             switch (@typeInfo(T)) {
                 .@"struct" => |info| {
                     if (@hasField(T, "__proconio_marker")) {
-                        result = try T.input(self);
+                        result = try T.input(self, default_value);
                     } else {
                         inline for (info.fields) |field| {
-                            @field(result, field.name) = try self.input(field.type);
+                            @field(result, field.name) = try self.inputWithDefault(field.type, field.defaultValue());
                         }
                     }
                 },
@@ -82,7 +88,7 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
                 },
                 .array => |info| {
                     inline for (0..info.len) |i| {
-                        result[i] = try self.input(info.child);
+                        result[i] = try self.inputWithDefault(info.child, null);
                     }
                 },
                 .optional => |info| {
@@ -90,48 +96,15 @@ fn ProconioAny(comptime S: type, comptime interactive: bool) type {
                 },
                 .vector => |info| {
                     inline for (0..info.len) |i| {
-                        result[i] = try self.input(info.child);
+                        result[i] = try self.input(info.child, null);
                     }
                 },
                 else => {
                     // TODO: support other types
-                    @compileError(std.fmt.comptimePrint("invalid type ({s}) given to Scanner", .{@typeName(T)}));
+                    @compileError(std.fmt.comptimePrint("invalid type ({s}) given to input", .{@typeName(T)}));
                 },
             }
             return result;
-        }
-
-        fn Parse(comptime T: type) type {
-            switch (@typeInfo(T)) {
-                .@"struct" => |info| {
-                    if (@hasField(T, "__proconio_marker")) {
-                        return T.Type;
-                    } else {
-                        var fields: [info.fields.len]std.builtin.Type.StructField = undefined;
-                        inline for (info.fields, 0..) |field, i| {
-                            const FieldType = Self.Parse(field.type);
-                            fields[i] = .{
-                                .name = field.name,
-                                .type = FieldType,
-                                .default_value_ptr = field.default_value_ptr,
-                                .is_comptime = field.is_comptime,
-                                .alignment = @alignOf(FieldType),
-                            };
-                        }
-
-                        return @Type(.{
-                            .@"struct" = .{
-                                .layout = info.layout,
-                                .backing_integer = info.backing_integer,
-                                .fields = &fields,
-                                .decls = info.decls,
-                                .is_tuple = info.is_tuple,
-                            },
-                        });
-                    }
-                },
-                else => return T,
-            }
         }
     };
 }
@@ -145,7 +118,12 @@ test {
     const allocator = testing.allocator;
     var proconio = try initAny(
         allocator,
-        "1234 5678 3.14 true false test\n 100 100 200 300",
+        \\ 1234 5678 3.14 true false test
+        \\ 100 100 200 300
+        \\S#...
+        \\.#.#.
+        \\...#G
+    ,
         false,
     );
     defer proconio.deinit();
@@ -156,8 +134,9 @@ test {
         f: f32,
         b1: bool,
         b2: bool,
-        s: marker.Bytes,
-        arr: marker.Slice(struct { usize, usize }, 2),
+        s: marker.Bytes = .{},
+        arr: marker.Slice(struct { usize, usize }) = .init(2),
+        cell: marker.Slice(marker.Bytes) = .{ .len = 3 },
     });
 
     try testing.expectEqual(@as(u32, 1234), in.n);
@@ -168,4 +147,8 @@ test {
     try testing.expectEqualSlices(u8, "test", in.s);
 
     try testing.expectEqualSlices(struct { usize, usize }, &[_]struct { usize, usize }{ .{ 100, 100 }, .{ 200, 300 } }, in.arr);
+
+    try testing.expectEqualSlices(u8, "S#...", in.cell[0]);
+    try testing.expectEqualSlices(u8, ".#.#.", in.cell[1]);
+    try testing.expectEqualSlices(u8, "...#G", in.cell[2]);
 }
